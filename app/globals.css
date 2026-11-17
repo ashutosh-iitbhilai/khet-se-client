@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Brand rule: no rounded corners anywhere — including native form controls. */
+  *,
+  *::before,
+  *::after {
+    border-radius: 0 !important;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-white font-sans text-soil;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight text-soil;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-leaf ring-offset-2 ring-offset-white;
+  }
+
+  ::selection {
+    @apply bg-sprout text-leaf-dark;
+  }
+}
+
+@layer components {
+  .section {
+    @apply mx-auto w-full max-w-site px-4 sm:px-6;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-leaf;
+  }
+}
