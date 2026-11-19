@@ -12,6 +12,8 @@ interface AuthContextValue {
   login: (data: LoginPayload) => Promise<User>;
   register: (data: RegisterPayload) => Promise<User>;
   logout: () => Promise<void>;
+  /** Sign out on every device, this one included. */
+  logoutAll: () => Promise<void>;
   /** Replace the cached user after a profile update. */
   updateUser: (user: User) => void;
 }
@@ -58,9 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const logoutAll = useCallback(async () => {
+    try {
+      await authService.logoutAll();
+    } finally {
+      setUser(null);
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, updateUser: setUser }),
-    [user, loading, login, register, logout],
+    () => ({ user, loading, login, register, logout, logoutAll, updateUser: setUser }),
+    [user, loading, login, register, logout, logoutAll],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

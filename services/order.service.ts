@@ -39,6 +39,8 @@ export const orderService = {
   mine: (page = 1, limit = 10) => apiPage<Order>('/orders/my-orders', { query: { page, limit } }),
   get: (id: string) => api<{ order: Order }>(`/orders/${id}`),
   cancel: (id: string, groupId?: string) => api<{ order: Order }>(`/orders/${id}/cancel`, { method: 'POST', body: { groupId } }),
+  /** Issue a fresh delivery code (e.g. after it locked from wrong attempts). */
+  newCode: (id: string, groupId: string) => api<{ order: Order }>(`/orders/${id}/groups/${groupId}/code`, { method: 'POST' }),
 
   farmerQueue: (view: 'incoming' | 'active' | 'completed', page = 1) =>
     apiPage<FarmerOrder>('/orders/farmer', { query: { view, page, limit: 20 } }),

@@ -18,5 +18,7 @@ export const authService = {
   register: (body: RegisterPayload) => api<AuthResponse>('/auth/register', { method: 'POST', body }),
   login: (body: LoginPayload) => api<AuthResponse>('/auth/login', { method: 'POST', body }),
   logout: () => api<null>('/auth/logout', { method: 'POST' }),
+  /** Ends every session of this account (all devices). */
+  logoutAll: () => api<{ sessionsEnded: number }>('/auth/logout-all', { method: 'POST' }),
   me: () => api<{ user: User }>('/auth/me'),
 };

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useFetch } from '@/hooks/useFetch';
 import { uploadService, type UploadKind } from '@/services/upload.service';
+import { OPTIMIZED_HOSTS } from '@/lib/imageHosts';
 
 interface ImageListInputProps {
   value: string[];
@@ -51,6 +52,16 @@ export function ImageListInput({ value, onChange, kind, max }: ImageListInputPro
   const addUrl = () => {
     const v = url.trim();
     if (!/^https:\/\/\S+$/.test(v)) return setError('Paste a link that starts with https://');
+    // Same allow-list as the API (ALLOWED_IMAGE_HOSTS): other sites' images are refused.
+    let host = '';
+    try {
+      host = new URL(v).hostname.toLowerCase();
+    } catch {
+      /* handled below */
+    }
+    if (!(OPTIMIZED_HOSTS as readonly string[]).includes(host)) {
+      return setError(`Use a photo link from ${OPTIMIZED_HOSTS.join(', ')}.`);
+    }
     if (value.includes(v)) return setError('This photo is already added');
     setError(null);
     onChange([...value, v]);

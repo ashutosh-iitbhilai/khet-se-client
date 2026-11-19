@@ -116,7 +116,12 @@ export function FarmerOrderCard({ order, group, onChanged }: { order: FarmerOrde
               <Navigation className="h-4 w-4 text-leaf" aria-hidden /> Directions
             </a>
           </div>
-          {group.scheduledFor && !['delivered', 'rejected', 'cancelled'].includes(group.status) && (
+          {group.status === 'pending' && group.acceptBy && (
+            <p className="font-medium text-turmeric">
+              Accept or decline by {formatDateTime(group.acceptBy)} — after that it is cancelled automatically.
+            </p>
+          )}
+          {group.scheduledFor && !['pending', 'delivered', 'rejected', 'cancelled'].includes(group.status) && (
             <p className="text-soil-muted">Deliver by {new Date(group.scheduledFor).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
           )}
         </div>
@@ -167,7 +172,14 @@ export function FarmerOrderCard({ order, group, onChanged }: { order: FarmerOrde
             </div>
           )}
 
-          {group.status === 'out_for_delivery' && (
+          {group.status === 'out_for_delivery' && group.codeLocked && (
+            <Alert>
+              Too many wrong codes — this delivery code is locked. Ask the customer to tap “Get a new code” on their order page, then
+              enter the new one. Refresh this page after they do.
+            </Alert>
+          )}
+
+          {group.status === 'out_for_delivery' && !group.codeLocked && (
             <form
               className="flex flex-wrap items-end gap-3"
               onSubmit={(e) => {

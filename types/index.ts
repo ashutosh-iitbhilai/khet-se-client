@@ -349,6 +349,11 @@ export interface OrderGroup {
   status: GroupStatus;
   history: { status: GroupStatus; at: string; by: string; note?: string }[];
   handoverCode?: string;
+  /** True after too many wrong codes; the customer must issue a new one. */
+  codeLocked?: boolean;
+  codeAttempts?: number;
+  /** The farmer must accept or decline before this, or the group is cancelled. */
+  acceptBy?: string;
   scheduledFor?: string;
   paymentCollected: boolean;
   cancelReason?: string;

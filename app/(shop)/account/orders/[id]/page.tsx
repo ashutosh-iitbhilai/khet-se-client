@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { ArrowLeft, CalendarDays, KeyRound, PackageX, Phone } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, KeyRound, PackageX, Phone } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -157,6 +157,8 @@ function GroupCard({ order, group, onChange, onError }: { order: Order; group: O
   const st = GROUP_STATUS[group.status];
   const showCode = ['pending', 'accepted', 'packed', 'out_for_delivery'].includes(group.status) && order.paymentStatus !== 'pending';
 
+  const [renewing, setRenewing] = useState(false);
+
   const cancel = async () => {
     onError(null);
     setBusy(true);
@@ -167,6 +169,18 @@ function GroupCard({ order, group, onChange, onError }: { order: Order; group: O
     } finally {
       setBusy(false);
       setConfirming(false);
+    }
+  };
+
+  const renewCode = async () => {
+    onError(null);
+    setRenewing(true);
+    try {
+      onChange((await orderService.newCode(order.id, groupId(group))).order);
+    } catch (err) {
+      onError((err as Error).message);
+    } finally {
+      setRenewing(false);
     }
   };
 
@@ -184,6 +198,26 @@ function GroupCard({ order, group, onChange, onError }: { order: Order; group: O
 
       <div className="space-y-5 p-5">
         <OrderTracker group={group} />
+
+        {group.status === 'pending' && group.acceptBy && (
+          <p className="flex items-center gap-2 text-sm text-soil-muted">
+            <Clock className="h-4 w-4 text-turmeric" aria-hidden />
+            Waiting for {group.farmerName} to confirm — by {formatDateTime(group.acceptBy)}. If they don’t, this part is cancelled
+            automatically{order.paymentMethod === 'online' ? ' and refunded' : ''}.
+          </p>
+        )}
+
+        {group.codeLocked && showCode && (
+          <div className="flex flex-col gap-3 border-l-4 border-danger bg-red-50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              <strong>Your delivery code was locked</strong> after too many wrong attempts. If you are with the farmer now, get a new
+              code and share it with them.
+            </p>
+            <Button size="sm" onClick={renewCode} loading={renewing}>
+              Get a new code
+            </Button>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3">
           {showCode && group.handoverCode && (

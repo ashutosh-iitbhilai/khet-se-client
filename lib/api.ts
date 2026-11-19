@@ -46,7 +46,25 @@ interface Envelope {
   meta?: PageMeta;
 }
 
-async function request(path: string, opts: RequestOptions = {}): Promise<Envelope> {
+/**
+ * Sessions use a 15-minute access cookie plus a longer-lived refresh cookie. When a request
+ * comes back 401 we try one refresh and replay the request. Concurrent 401s share a single
+ * refresh call, so the refresh token is rotated once, not once per request.
+ */
+const NO_REFRESH = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
+let refreshing: Promise<boolean> | null = null;
+
+export function refreshSession(): Promise<boolean> {
+  refreshing ??= fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include', headers: { Accept: 'application/json' } })
+    .then((r) => r.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+}
+
+async function request(path: string, opts: RequestOptions = {}, retried = false): Promise<Envelope> {
   const url = new URL(`${API_URL}${path}`);
   if (opts.query) {
     for (const [k, v] of Object.entries(opts.query)) {
@@ -72,8 +90,11 @@ async function request(path: string, opts: RequestOptions = {}): Promise<Envelop
     throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach Khet Se right now. Check your connection and try again.');
   }
 
-  if (res.status === 204) return { success: true, data: null };
+  if (res.status === 401 && !retried && !NO_REFRESH.some((p) => path.startsWith(p)) && (await refreshSession())) {
+    return request(path, opts, true);
+  }
 
+  if (res.status === 204) return { success: true, data: null };
 
   const payload = await res.json().catch(() => null);
   if (!res.ok || !payload?.success) {
