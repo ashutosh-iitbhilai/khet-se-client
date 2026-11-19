@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
   //   NEXT_DIST_DIR=.next-build npm run build
   distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
+  // Production on one address: serve the API under this site's /api by proxying to the API
+  // server (e.g. API_PROXY_TARGET=http://127.0.0.1:5050 with NEXT_PUBLIC_API_URL=/api).
+  // Set at build time. Next forwards the client's IP in X-Forwarded-For for rate limiting.
+  async rewrites() {
+    const target = process.env.API_PROXY_TARGET?.replace(/\/$/, '');
+    return target ? [{ source: '/api/:path*', destination: `${target}/api/:path*` }] : [];
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     // Optimised variants are reused for a week (source photos rarely change).

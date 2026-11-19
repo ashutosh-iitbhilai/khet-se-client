@@ -1,4 +1,4 @@
-import { API_URL } from './config';
+import { API_URL, apiUrl } from './config';
 
 export interface ApiErrorDetail {
   field: string;
@@ -79,7 +79,7 @@ export function refreshSession(): Promise<boolean> {
 }
 
 async function request(path: string, opts: RequestOptions = {}, retried = false): Promise<Envelope> {
-  const url = new URL(`${API_URL}${path}`);
+  const url = apiUrl(path);
   if (opts.query) {
     for (const [k, v] of Object.entries(opts.query)) {
       if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));

@@ -1,4 +1,4 @@
-import { API_URL } from '@/lib/config';
+import { apiUrl } from '@/lib/config';
 import { api, ApiError, type QueryParams } from '@/lib/api';
 import type { FarmerProfile, GeoPageMeta, ListingDetail, NearbyFarm, NearbyListing } from '@/types';
 
@@ -9,7 +9,7 @@ export interface GeoPage<T> {
 
 /** Geo list endpoints return `{ data, meta }` with radius information in meta. */
 async function geoPage<T>(path: string, query: QueryParams, signal?: AbortSignal): Promise<GeoPage<T>> {
-  const url = new URL(`${API_URL}${path}`);
+  const url = apiUrl(path);
   for (const [k, v] of Object.entries(query)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
   }
