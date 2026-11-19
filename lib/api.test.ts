@@ -53,3 +53,30 @@ describe('api client session refresh', () => {
     expect(calls).toEqual(['/auth/login']);
   });
 });
+
+describe('api change events', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('announces successful changes (so cached screens refresh), but not reads, quotes or failures', async () => {
+    const { onApiEvent } = await import('./api');
+    const seen: string[] = [];
+    const off = onApiEvent((e) => e.type === 'changed' && seen.push(e.path));
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => (String(input).includes('fail') ? json(409, { success: false, error: { code: 'X', message: 'no' } }) : ok({}))));
+    await api('/orders/abc/status', { method: 'PUT', body: {} });
+    await api('/orders/my-orders');
+    await api('/orders/quote', { method: 'POST', body: {} });
+    await api('/inventory/fail', { method: 'PATCH', body: {} }).catch(() => undefined);
+    off();
+    expect(seen).toEqual(['/orders/abc/status']);
+  });
+
+  it('reports a lost session when the refresh fails', async () => {
+    const { onApiEvent } = await import('./api');
+    const events: string[] = [];
+    const off = onApiEvent((e) => events.push(e.type));
+    fakeServer({ refreshOk: false });
+    await api('/orders/my-orders').catch(() => undefined);
+    off();
+    expect(events).toEqual(['session-lost']);
+  });
+});

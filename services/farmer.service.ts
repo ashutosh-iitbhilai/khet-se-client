@@ -69,5 +69,5 @@ export const inventoryService = {
 };
 
 export const userService = {
-  updateMe: (body: { name?: string; phone?: string }) => api<{ user: User }>('/users/me', { method: 'PATCH', body }),
+  updateMe: (body: { name?: string; phone?: string; email?: string }) => api<{ user: User }>('/users/me', { method: 'PATCH', body }),
 };

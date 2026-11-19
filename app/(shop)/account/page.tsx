@@ -14,7 +14,7 @@ import { orderService } from '@/services/order.service';
 
 export default function MyOrdersPage() {
   const [page, setPage] = useState(1);
-  const { data, error, loading, reload } = useFetch(() => orderService.mine(page, 10), [page]);
+  const { data, error, loading, reload } = useFetch(['orders', 'mine', page], () => orderService.mine(page, 10), { refetchInterval: 60_000 });
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (loading && !data) {

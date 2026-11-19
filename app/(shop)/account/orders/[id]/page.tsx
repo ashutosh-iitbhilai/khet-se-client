@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { ArrowLeft, CalendarDays, Clock, KeyRound, PackageX, Phone } from 'lucide-react';
+import { ArrowLeft, Bike, CalendarDays, Clock, KeyRound, PackageX, Phone } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { GROUP_STATUS, ORDER_STATUS, PAYMENT_STATUS, formatDateTime } from '@/li
 import { openRazorpay } from '@/lib/razorpay';
 import { formatINR } from '@/lib/utils';
 import { formatKm, unitLabel } from '@/lib/labels';
+import { VEHICLE_LABEL } from '@/features/delivery/labels';
 import { orderService, paymentService } from '@/services/order.service';
 import { groupId, type Order, type OrderGroup } from '@/types';
 
@@ -31,7 +32,7 @@ export default function OrderPage() {
 function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const params = useSearchParams();
-  const { data, error, loading, reload, setData } = useFetch(() => orderService.get(id), [id]);
+  const { data, error, loading, reload, setData } = useFetch(['orders', 'detail', id], () => orderService.get(id), { refetchInterval: 30_000 });
   const [actionError, setActionError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
 
@@ -235,13 +236,27 @@ function GroupCard({ order, group, onChange, onError }: { order: Order; group: O
               Expected {new Date(group.scheduledFor).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
             </div>
           )}
+          {group.courier && ['accepted', 'packed', 'out_for_delivery'].includes(group.status) && (
+            <div className="flex items-center gap-3 border border-line px-4 py-2.5 text-sm">
+              <Bike className="h-4 w-4 text-leaf" aria-hidden />
+              <span>
+                <strong>{group.courier.name}</strong> ({VEHICLE_LABEL[group.courier.vehicle]}){' '}
+                {group.status === 'out_for_delivery' ? 'is on the way' : 'will deliver this'}
+              </span>
+              {group.courier.phone && (
+                <a href={`tel:+91${group.courier.phone}`} className="font-semibold text-leaf hover:underline">
+                  Call
+                </a>
+              )}
+            </div>
+          )}
           {group.farmerPhone && ['accepted', 'packed', 'out_for_delivery'].includes(group.status) && (
             <a href={`tel:+91${group.farmerPhone}`} className="flex items-center gap-2 border border-line px-4 py-2.5 text-sm hover:border-leaf">
               <Phone className="h-4 w-4 text-leaf" aria-hidden /> Call farmer
             </a>
           )}
         </div>
-        {showCode && <p className="-mt-2 text-xs text-soil-muted">Share this code with the farmer only when you receive your produce.</p>}
+        {showCode && <p className="-mt-2 text-xs text-soil-muted">Share this code only when you receive your produce, with the farmer or the delivery partner.</p>}
 
         <ul className="divide-y divide-line border-y border-line">
           {group.items.map((i) => (

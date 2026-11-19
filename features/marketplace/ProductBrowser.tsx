@@ -56,10 +56,7 @@ export function ProductBrowser({ location }: { location: CustomerLocation }) {
     page: f.page,
     limit: PAGE_SIZE,
   };
-  const { data, error, loading, reload } = useFetch(
-    () => marketplaceService.listings(query),
-    [location.lat, location.lng, f.q, type, f.category, f.sort, f.maxPrice, f.radius, f.organic, f.page],
-  );
+  const { data, error, loading, reload } = useFetch(['market', 'listings', query], () => marketplaceService.listings(query));
 
   const filtered = Boolean(f.q || f.category || type !== 'all' || f.maxPrice !== 'any' || f.radius !== 'auto' || f.organic);
   const categoryOptions = type === 'all' ? [] : CATEGORIES[type as 'fresh' | 'dry'];

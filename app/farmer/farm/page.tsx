@@ -8,7 +8,7 @@ import { useFetch } from '@/hooks/useFetch';
 import { farmerService } from '@/services/farmer.service';
 
 export default function FarmProfilePage() {
-  const { data, error, loading, reload, setData } = useFetch(() => farmerService.me());
+  const { data, error, loading, reload, setData } = useFetch(['farmer', 'me'], () => farmerService.me());
   // Most farmers have one farm; the API supports more for later.
   const farm = data?.farms[0];
 

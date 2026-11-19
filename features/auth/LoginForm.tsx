@@ -12,19 +12,23 @@ import { Alert } from '@/components/ui/alert';
 import { homeForRole, useAuth } from './AuthProvider';
 import { loginSchema, type LoginValues } from './schemas';
 import { applyServerErrors } from './applyServerErrors';
+import { GoogleButton, SIGN_IN_ERRORS } from './GoogleButton';
 
 export function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
-  const next = useSearchParams().get('next');
-  const [formError, setFormError] = useState<string | null>(null);
+  const params = useSearchParams();
+  const next = params.get('next');
+  const errorCode = params.get('error');
+  const [formError, setFormError] = useState<string | null>(errorCode ? (SIGN_IN_ERRORS[errorCode] ?? SIGN_IN_ERRORS.google_failed!) : null);
+  const reset = params.get('reset') === '1';
 
   const {
     register,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
+  } = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { identifier: '', password: '' } });
 
   const onSubmit = async (values: LoginValues) => {
     setFormError(null);
@@ -34,7 +38,7 @@ export function LoginForm() {
       router.push(next?.startsWith('/') && !next.startsWith('//') ? next : homeForRole(user.role));
       router.refresh();
     } catch (err) {
-      setFormError(applyServerErrors(err, setError, ['email', 'password']));
+      setFormError(applyServerErrors(err, setError, ['identifier', 'password']));
     }
   };
 
@@ -43,18 +47,24 @@ export function LoginForm() {
       <h1 className="text-3xl font-semibold">Welcome back</h1>
       <p className="mt-2 text-sm text-soil-muted">Log in to order fresh produce or manage your farm.</p>
 
+      <GoogleButton next={next} />
+
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-5">
+        {reset && !formError && <Alert tone="success">Your password has been changed. Log in with the new one.</Alert>}
         {formError && <Alert>{formError}</Alert>}
 
-        <FormField id="email" label="Email" error={errors.email?.message}>
+        <FormField id="identifier" label="Mobile number or email" error={errors.identifier?.message}>
           <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="you@example.com"
-            invalid={!!errors.email}
-            aria-describedby={errors.email ? 'email-error' : undefined}
-            {...register('email')}
+            id="identifier"
+            type="text"
+            inputMode="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder="98765 43210 or you@example.com"
+            invalid={!!errors.identifier}
+            aria-describedby={errors.identifier ? 'identifier-error' : undefined}
+            {...register('identifier')}
           />
         </FormField>
 
@@ -68,6 +78,11 @@ export function LoginForm() {
             {...register('password')}
           />
         </FormField>
+        <div className="-mt-3 text-right">
+          <Link href="/forgot-password" className="text-sm font-medium text-leaf hover:underline">
+            Forgot password?
+          </Link>
+        </div>
 
         <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
           Log in

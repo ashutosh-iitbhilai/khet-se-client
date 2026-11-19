@@ -31,9 +31,8 @@ function SeeAll({ href, label }: { href: string; label: string }) {
 }
 
 function FarmsGrid({ location }: { location: CustomerLocation }) {
-  const { data, error, loading, reload } = useFetch(
-    () => marketplaceService.recommendedFarms({ lng: location.lng, lat: location.lat, limit: 6 }),
-    [location.lat, location.lng],
+  const { data, error, loading, reload } = useFetch(['market', 'recommended-farms', location.lat, location.lng], () =>
+    marketplaceService.recommendedFarms({ lng: location.lng, lat: location.lat, limit: 6 }),
   );
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
@@ -68,9 +67,8 @@ function FarmsGrid({ location }: { location: CustomerLocation }) {
 }
 
 function ListingsGrid({ location }: { location: CustomerLocation }) {
-  const { data, error, loading, reload } = useFetch(
-    () => marketplaceService.recommendedListings({ lng: location.lng, lat: location.lat, limit: 8 }),
-    [location.lat, location.lng],
+  const { data, error, loading, reload } = useFetch(['market', 'recommended-listings', location.lat, location.lng], () =>
+    marketplaceService.recommendedListings({ lng: location.lng, lat: location.lat, limit: 8 }),
   );
 
   if (error) return <ErrorState error={error} onRetry={reload} />;

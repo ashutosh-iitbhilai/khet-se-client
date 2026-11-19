@@ -45,7 +45,33 @@ CI (`.github/workflows/ci.yml`) runs typecheck, tests and build, and builds the 
 | `/cart`, `/checkout` | Basket grouped by farm with live server-checked quote; address, payment (COD / Razorpay when enabled), review |
 | `/account` | Orders with per-farm tracking and delivery codes, saved addresses, profile |
 
+**Sign-in** (everyone)
+
+| Path | What it shows |
+|---|---|
+| `/login`, `/register` | Mobile number (or email) + password; email is optional at signup, and "Continue with Google" when the API has Google configured (`/api/auth/providers`). Google errors arrive as `/login?error=<code>`. |
+| `/forgot-password` | Asks for an email; the same confirmation whether or not an account exists |
+| `/reset-password?token=…` | Sets a new password from the emailed link (single-use, 30 minutes), then sends you to log in |
+
+**Admin** (`/admin`, admin accounts only):
+- Overview: what needs attention, plus business numbers.
+- Farmer verification: approve or reject the profile and the organic certificate, with a note the farmer sees.
+- People: search, role details, suspend or reactivate with a reason.
+- Orders: filters, search, part-cancel, record refunds.
+- Transactions.
+- Audit trail.
+
+**Delivery partners** (`/delivery`): overview with online switch, today's earnings and cash collected; *Find deliveries* (open jobs near your base, auto-refreshing, first to accept wins); *My deliveries* (call / directions, "I've picked it up", hand over with the customer's code); history & earnings; work area & vehicle; account settings. Register with "I deliver".
+
 **Farmers** (`/farmer`): overview, my products, add product, inventory, incoming / completed orders, farm profile with map pin, account settings.
+
+## Data and state
+
+- **Server data** goes through one shared cache ([TanStack Query](https://tanstack.com/query)), via `useFetch(key, fetcher)` in `hooks/useFetch.ts`. A key starts with its area (`orders`, `farmer`, `delivery`, `inventory`, `market`, `addresses`, …, see `lib/queryClient.ts`), then its parameters.
+- **After any successful change**, the API client announces it, and every screen showing affected data refreshes (`areasChangedBy` maps API paths to areas). Screens never have to reload by hand.
+- **Automatic refreshes:** data refetches when you return to the tab. Farmer order queues, the partner job board, active deliveries and the customer's order page also poll every 20–30 s.
+- **Login, logout or switching accounts** clears the cache. If the session ends elsewhere, the app shows you as logged out.
+- **Local-only state:** the cart and the delivery location live in `localStorage`. Cart prices and stock are always re-checked with the server (`useQuote`).
 
 ## Design
 

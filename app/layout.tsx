@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Inter } from 'next/font/google';
 import { AuthProvider } from '@/features/auth/AuthProvider';
+import { QueryProvider } from '@/features/QueryProvider';
 import { LocationProvider } from '@/features/location/LocationProvider';
 import { CartProvider } from '@/features/cart/CartProvider';
 import { APP_NAME, APP_TAGLINE } from '@/lib/config';
@@ -23,11 +24,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="min-h-screen">
-        <AuthProvider>
-          <LocationProvider>
-            <CartProvider>{children}</CartProvider>
-          </LocationProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <LocationProvider>
+              <CartProvider>{children}</CartProvider>
+            </LocationProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

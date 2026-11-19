@@ -42,6 +42,12 @@ export const orderService = {
   /** Issue a fresh delivery code (e.g. after it locked from wrong attempts). */
   newCode: (id: string, groupId: string) => api<{ order: Order }>(`/orders/${id}/groups/${groupId}/code`, { method: 'POST' }),
 
+  /** Farmer: hand the delivery to a Khet Se delivery partner, or take it back. */
+  requestPartner: (id: string, groupId: string) =>
+    api<{ order: FarmerOrder }>(`/orders/${id}/groups/${groupId}/delivery-partner`, { method: 'POST' }),
+  cancelPartnerRequest: (id: string, groupId: string) =>
+    api<{ order: FarmerOrder }>(`/orders/${id}/groups/${groupId}/delivery-partner`, { method: 'DELETE' }),
+
   farmerQueue: (view: 'incoming' | 'active' | 'completed', page = 1) =>
     apiPage<FarmerOrder>('/orders/farmer', { query: { view, page, limit: 20 } }),
   updateStatus: (id: string, body: { groupId: string; status: GroupStatus; note?: string; code?: string; deliveryDate?: string }) =>

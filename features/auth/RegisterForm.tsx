@@ -5,25 +5,28 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ShoppingBasket, Tractor } from 'lucide-react';
+import { Bike, ShoppingBasket, Tractor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/ui/form-field';
 import { Alert } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { homeForRole, useAuth } from './AuthProvider';
-import { registerSchema, type RegisterValues } from './schemas';
+import { normalizePhone, registerSchema, type RegisterValues } from './schemas';
 import { applyServerErrors } from './applyServerErrors';
+import { GoogleButton } from './GoogleButton';
 
 const ROLE_OPTIONS = [
   { value: 'customer', label: 'I want to buy', hint: 'Fresh produce delivered', icon: ShoppingBasket },
   { value: 'farmer', label: 'I am a farmer', hint: 'Sell my harvest', icon: Tractor },
+  { value: 'delivery', label: 'I deliver', hint: 'Earn per delivery', icon: Bike },
 ] as const;
 
 export function RegisterForm() {
   const { register: signUp } = useAuth();
   const router = useRouter();
-  const initialRole = useSearchParams().get('role') === 'farmer' ? 'farmer' : 'customer';
+  const requested = useSearchParams().get('role');
+  const initialRole = requested === 'farmer' || requested === 'delivery' ? requested : 'customer';
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -42,7 +45,7 @@ export function RegisterForm() {
   const onSubmit = async (values: RegisterValues) => {
     setFormError(null);
     try {
-      const user = await signUp({ ...values, phone: values.phone || undefined });
+      const user = await signUp({ ...values, phone: normalizePhone(values.phone), email: values.email || undefined });
       router.push(homeForRole(user.role));
       router.refresh();
     } catch (err) {
@@ -60,7 +63,7 @@ export function RegisterForm() {
 
         <fieldset>
           <legend className="mb-2 text-sm font-medium">How will you use Khet Se?</legend>
-          <div className="grid grid-cols-2 gap-3" role="radiogroup">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup">
             {ROLE_OPTIONS.map(({ value, label, hint, icon: Icon }) => {
               const active = role === value;
               return (
@@ -71,7 +74,7 @@ export function RegisterForm() {
                   aria-checked={active}
                   onClick={() => setValue('role', value, { shouldValidate: true })}
                   className={cn(
-                    'flex flex-col items-start gap-2 border p-4 text-left transition-colors',
+                    'flex flex-col items-start gap-2 border p-3 text-left transition-colors sm:p-4',
                     active ? 'border-leaf bg-sprout' : 'border-line hover:border-leaf/60',
                   )}
                 >
@@ -84,26 +87,23 @@ export function RegisterForm() {
           </div>
         </fieldset>
 
+        <GoogleButton role={role} label={role === 'farmer' ? 'Sign up as a farmer with Google' : role === 'delivery' ? 'Sign up as a partner with Google' : 'Sign up with Google'} />
+
         <FormField id="name" label={role === 'farmer' ? 'Your full name' : 'Full name'} error={errors.name?.message}>
           <Input id="name" autoComplete="name" invalid={!!errors.name} {...register('name')} />
-        </FormField>
-
-        <FormField id="email" label="Email" error={errors.email?.message}>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="you@example.com"
-            invalid={!!errors.email}
-            {...register('email')}
-          />
         </FormField>
 
         <FormField
           id="phone"
           label="Mobile number"
           error={errors.phone?.message}
-          hint={role === 'farmer' ? 'Customers and our team will reach you on this number.' : 'Optional — for delivery updates.'}
+          hint={
+            role === 'farmer'
+              ? 'You log in with this number. Customers and our team reach you on it.'
+              : role === 'delivery'
+                ? 'You log in with this number. Farmers and customers call you on it during a delivery.'
+                : 'You log in with this number. We use it for delivery updates.'
+          }
         >
           <div className="flex">
             <span className="flex items-center border border-r-0 border-line bg-cream px-3 text-sm text-soil-muted">
@@ -113,12 +113,17 @@ export function RegisterForm() {
               id="phone"
               type="tel"
               inputMode="numeric"
-              maxLength={10}
+              maxLength={17}
               autoComplete="tel-national"
+              placeholder="98765 43210"
               invalid={!!errors.phone}
               {...register('phone')}
             />
           </div>
+        </FormField>
+
+        <FormField id="email" label="Email (optional)" error={errors.email?.message} hint="Lets you reset your password if you forget it.">
+          <Input id="email" type="email" autoComplete="email" placeholder="you@example.com" invalid={!!errors.email} {...register('email')} />
         </FormField>
 
         <FormField
@@ -137,7 +142,7 @@ export function RegisterForm() {
         </FormField>
 
         <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
-          {role === 'farmer' ? 'Create farmer account' : 'Create account'}
+          {role === 'farmer' ? 'Create farmer account' : role === 'delivery' ? 'Create delivery partner account' : 'Create account'}
         </Button>
       </form>
 

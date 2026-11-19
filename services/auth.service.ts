@@ -3,14 +3,15 @@ import type { AuthResponse, User } from '@/types';
 
 export interface RegisterPayload {
   name: string;
-  email: string;
-  phone?: string;
+  phone: string;
+  email?: string;
   password: string;
-  role: 'customer' | 'farmer';
+  role: 'customer' | 'farmer' | 'delivery';
 }
 
 export interface LoginPayload {
-  email: string;
+  /** Mobile number (any common format) or email. */
+  identifier: string;
   password: string;
 }
 
@@ -21,4 +22,9 @@ export const authService = {
   /** Ends every session of this account (all devices). */
   logoutAll: () => api<{ sessionsEnded: number }>('/auth/logout-all', { method: 'POST' }),
   me: () => api<{ user: User }>('/auth/me'),
+  /** Which sign-in options are switched on for this deployment. */
+  providers: () => api<{ google: boolean; passwordReset: boolean }>('/auth/providers'),
+  forgotPassword: (identifier: string) => api<{ message: string }>('/auth/forgot-password', { method: 'POST', body: { identifier } }),
+  resetPassword: (token: string, password: string) =>
+    api<{ message: string }>('/auth/reset-password', { method: 'POST', body: { token, password } }),
 };

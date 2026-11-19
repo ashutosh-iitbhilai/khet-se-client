@@ -1,50 +1,59 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
+import { useCallback } from 'react';
 
 interface FetchState<T> {
   data: T | undefined;
+  /** Only when there is nothing to show; a failed background refresh keeps the last good data. */
   error: Error | null;
+  /** True while there is no data yet, or while showing the previous page's data for a new one. */
   loading: boolean;
-  /** Re-runs the request; keeps showing current data while refreshing. */
+  /** Fetch again now (also happens automatically after changes and when you return to the tab). */
   reload: () => Promise<void>;
+  /** Update the cached value directly, e.g. with the object a change returned. */
   setData: (updater: T | ((prev: T | undefined) => T)) => void;
 }
 
+interface FetchOptions {
+  /** Poll while the screen is open (ms), e.g. order queues and the job board. */
+  refetchInterval?: number;
+  enabled?: boolean;
+}
+
 /**
- * Minimal data-fetching hook with loading / error / reload.
- * `deps` re-trigger the request; stale responses are discarded.
+ * Data for one screen, from the shared cache. The key names the data: its first element is
+ * the area (see lib/queryClient.ts), the rest are the parameters (ids, page, filters, location).
+ * Screens that use the same key share one request and always show the same data.
  */
-export function useFetch<T>(fetcher: () => Promise<T>, deps: unknown[] = []): FetchState<T> {
-  const [data, setDataState] = useState<T>();
-  const [error, setError] = useState<Error | null>(null);
-  const [loading, setLoading] = useState(true);
-  const requestId = useRef(0);
-  const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
+export function useFetch<T>(key: QueryKey, fetcher: () => Promise<T>, opts: FetchOptions = {}): FetchState<T> {
+  const client = useQueryClient();
+  const q = useQuery({
+    queryKey: key,
+    queryFn: fetcher,
+    placeholderData: keepPreviousData,
+    refetchInterval: opts.refetchInterval,
+    enabled: opts.enabled,
+  });
 
-  const run = useCallback(async () => {
-    const id = ++requestId.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetcherRef.current();
-      if (id === requestId.current) setDataState(result);
-    } catch (err) {
-      if (id === requestId.current) setError(err as Error);
-    } finally {
-      if (id === requestId.current) setLoading(false);
-    }
-  }, []);
+  const reload = useCallback(async () => {
+    await q.refetch();
+  }, [q]);
 
-  useEffect(() => {
-    void run();
+  const setData = useCallback(
+    (updater: T | ((prev: T | undefined) => T)) => {
+      client.setQueryData<T>(key, (prev) => (typeof updater === 'function' ? (updater as (p: T | undefined) => T)(prev) : updater));
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+    [client, JSON.stringify(key)],
+  );
 
-  const setData = useCallback((updater: T | ((prev: T | undefined) => T)) => {
-    setDataState((prev) => (typeof updater === 'function' ? (updater as (p: T | undefined) => T)(prev) : updater));
-  }, []);
-
-  return { data, error, loading, reload: run, setData };
+  return {
+    data: q.data,
+    error: q.data === undefined ? (q.error as Error | null) : null,
+    // isPending with an idle fetch means the query is switched off (enabled: false), not loading.
+    loading: (q.isPending && q.fetchStatus !== 'idle') || q.isPlaceholderData,
+    reload,
+    setData,
+  };
 }

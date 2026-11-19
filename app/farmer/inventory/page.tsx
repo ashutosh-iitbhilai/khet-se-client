@@ -26,7 +26,7 @@ export default function InventoryPage() {
 
 function Inventory() {
   const { status, page, set } = useListingFilters();
-  const { data, error, loading, reload, setData } = useFetch(() => inventoryService.mine({ status, page, limit: 20 }), [status, page]);
+  const { data, error, loading, reload, setData } = useFetch(['inventory', 'mine', { status, page }], () => inventoryService.mine({ status, page, limit: 20 }));
 
   const replace = (updated: InventoryItem) =>
     setData((d) => ({ ...d!, items: d!.items.map((i) => (i.id === updated.id ? updated : i)) }));

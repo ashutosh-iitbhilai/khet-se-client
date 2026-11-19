@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { AlertTriangle, ArrowRight, Boxes, Check, CircleSlash, Inbox, Package, PlusSquare, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ErrorState, Skeleton } from '@/components/ui/states';
 import { PageHeader } from '@/features/farmer/FarmerShell';
@@ -18,7 +19,7 @@ const statusTone = (s: VerificationStatus) =>
 
 export default function FarmerOverviewPage() {
   const { user } = useAuth();
-  const { data, error, loading, reload } = useFetch(() => farmerService.overview());
+  const { data, error, loading, reload } = useFetch(['farmer', 'overview'], () => farmerService.overview(), { refetchInterval: 60_000 });
 
   const steps = data
     ? [
@@ -55,6 +56,17 @@ export default function FarmerOverviewPage() {
 
       {data && (
         <div className="space-y-8">
+          {data.profileStatus === 'rejected' && (
+            <Alert>
+              <strong>Your profile was not approved, so your produce is hidden from customers.</strong>{' '}
+              {data.profileReviewNote ? `Reason: ${data.profileReviewNote.replace(/[.\s]+$/, '')}. ` : ''}Update your details in Farm Profile, or call Khet Se support to request another review.
+            </Alert>
+          )}
+          {data.organicStatus === 'rejected' && (
+            <Alert>
+              Your organic certificate was not accepted{data.organicReviewNote ? `: ${data.organicReviewNote.replace(/[.\s]+$/, '')}` : ''}. Your produce is still sold, without the organic badge.
+            </Alert>
+          )}
           {!allDone && (
             <section className="border border-line bg-white p-6">
               <h2 className="font-sans text-base font-semibold">Get your farm ready</h2>

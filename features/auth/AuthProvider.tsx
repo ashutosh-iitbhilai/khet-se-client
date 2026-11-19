@@ -1,8 +1,9 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { authService, type LoginPayload, type RegisterPayload } from '@/services/auth.service';
-import { ApiError } from '@/lib/api';
+import { ApiError, onApiEvent } from '@/lib/api';
 import type { User } from '@/types';
 
 interface AuthContextValue {
@@ -14,8 +15,8 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   /** Sign out on every device, this one included. */
   logoutAll: () => Promise<void>;
-  /** Replace the cached user after a profile update. */
-  updateUser: (user: User) => void;
+  /** Replace the cached user after a profile update (null after a password reset signs everyone out). */
+  updateUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -23,6 +24,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // Whenever the signed-in person changes (login, logout, another account), drop every cached
+  // response so nobody ever sees the previous account's orders, jobs or addresses.
+  const lastUserId = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (loading) return;
+    const id = user?.id ?? null;
+    if (lastUserId.current !== undefined && lastUserId.current !== id) queryClient.clear();
+    lastUserId.current = id;
+  }, [user?.id, loading, queryClient]);
+
+  // The session expired or was ended elsewhere (logout on another device, suspension):
+  // show the person as logged out instead of a page full of errors.
+  useEffect(() => onApiEvent((e) => e.type === 'session-lost' && setUser(null)), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +101,7 @@ export function useAuth() {
 /** Where each role lands after signing in. */
 export function homeForRole(role: User['role']) {
   if (role === 'farmer') return '/farmer';
+  if (role === 'delivery') return '/delivery';
   if (role === 'admin') return '/admin';
   return '/';
 }

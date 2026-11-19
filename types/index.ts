@@ -1,9 +1,10 @@
-export type UserRole = 'customer' | 'farmer' | 'admin';
+export type UserRole = 'customer' | 'farmer' | 'delivery' | 'admin';
 
 export interface User {
   id: string;
   name: string;
-  email: string;
+  /** Optional: accounts can be mobile-only. */
+  email?: string;
   phone?: string;
   role: UserRole;
   status: 'active' | 'suspended';
@@ -119,6 +120,9 @@ export interface InventoryItem {
 
 export interface FarmerOverview {
   profileComplete: boolean;
+  /** Reasons given by Khet Se when a profile or certificate was rejected. */
+  profileReviewNote?: string;
+  organicReviewNote?: string;
   organicStatus: VerificationStatus;
   profileStatus: VerificationStatus;
   farmCount: number;
@@ -357,6 +361,10 @@ export interface OrderGroup {
   scheduledFor?: string;
   paymentCollected: boolean;
   cancelReason?: string;
+  /** "partner" once the farmer asked Khet Se for a delivery partner. */
+  deliveryMode?: 'self' | 'partner';
+  /** The partner who accepted the delivery. */
+  courier?: { name: string; phone?: string; vehicle: Vehicle };
 }
 
 export interface Order {
@@ -399,3 +407,50 @@ export interface OnlinePayment {
 
 /** Group id regardless of which serializer produced it. */
 export const groupId = (g: OrderGroup) => (g.id ?? g._id)!;
+
+// ─── Delivery partners ───────────────────────────────────────────────────────
+
+export const VEHICLES = ['bicycle', 'bike', 'scooter', 'auto', 'van'] as const;
+export type Vehicle = (typeof VEHICLES)[number];
+
+export interface PartnerProfile {
+  id: string;
+  vehicle: Vehicle;
+  base: { lng: number; lat: number; label: string } | null;
+  serviceRadiusKm: number;
+  isOnline: boolean;
+  maxActiveJobs: number;
+  /** Has a base location, so it can go online. */
+  ready: boolean;
+}
+
+export interface PartnerOverview {
+  profile: PartnerProfile;
+  activeJobs: number;
+  availableJobs: number;
+  today: { jobs: number; earned: number; km: number };
+  week: { jobs: number; earned: number };
+  cashInHand: number;
+}
+
+export type JobStatus = 'requested' | 'assigned' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'scheduled';
+
+/** A delivery job. Contact details and exact addresses appear only once it is yours. */
+export interface DeliveryJob {
+  id: string;
+  status: JobStatus;
+  orderNumber: string;
+  payout: number;
+  codAmount: number;
+  tripKm: number;
+  pickupDistanceKm?: number;
+  scheduledFor: string;
+  requestedAt?: string;
+  assignedAt?: string;
+  pickedUpAt?: string;
+  deliveredAt?: string;
+  itemCount: number;
+  items?: { name: string; quantity: number; unit: string; packSizeGrams?: number }[];
+  pickup: { farmName: string; area: string; location: { lng: number; lat: number }; line1?: string; farmerName?: string; farmerPhone?: string };
+  drop: { area: string; location?: { lng: number; lat: number }; name?: string; phone?: string; line1?: string };
+}

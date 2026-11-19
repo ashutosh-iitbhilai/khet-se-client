@@ -22,7 +22,7 @@ const MAX_FILE_MB = 8;
  * otherwise lets the farmer paste an https image link.
  */
 export function ImageListInput({ value, onChange, kind, max }: ImageListInputProps) {
-  const { data: config } = useFetch(() => uploadService.config());
+  const { data: config } = useFetch(['config', 'uploads'], () => uploadService.config());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');

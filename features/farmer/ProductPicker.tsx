@@ -14,7 +14,7 @@ import type { Product, ProductType } from '@/types';
 export function ProductPicker({ onPick, listedIds }: { onPick: (p: Product) => void; listedIds: Set<string> }) {
   const [type, setType] = useState<ProductType>('fresh');
   const [q, setQ] = useState('');
-  const { data, error, loading, reload } = useFetch(() => productService.list({ type, limit: 100 }), [type]);
+  const { data, error, loading, reload } = useFetch(['catalogue', type], () => productService.list({ type, limit: 100 }), {});
 
   const items = (data?.items ?? []).filter((p) => {
     const s = q.trim().toLowerCase();

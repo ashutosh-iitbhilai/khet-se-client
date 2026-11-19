@@ -15,6 +15,7 @@ const columns = [
     links: [
       { href: '/register?role=farmer', label: 'Sell on Khet Se' },
       { href: '/farmer', label: 'Farmer dashboard' },
+      { href: '/register?role=delivery', label: 'Deliver with Khet Se' },
     ],
   },
   {

@@ -12,10 +12,10 @@ import { farmerService, inventoryService } from '@/services/farmer.service';
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data, error, loading, reload } = useFetch(async () => {
+  const { data, error, loading, reload } = useFetch(['inventory', 'item', id], async () => {
     const [{ item }, me] = await Promise.all([inventoryService.get(id), farmerService.me()]);
     return { item, farms: me.farms };
-  }, [id]);
+  });
 
   return (
     <>

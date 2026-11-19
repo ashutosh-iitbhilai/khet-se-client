@@ -15,8 +15,9 @@ export default function FarmerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const { location, ready } = useCustomerLocation();
   const { data, error, loading, reload } = useFetch(
+    ['market', 'farmer-profile', id, location?.lat, location?.lng],
     async () => (ready ? marketplaceService.farmerProfile(id, location ?? undefined) : null),
-    [id, ready, location?.lat, location?.lng],
+    { enabled: ready },
   );
 
   if (error instanceof ApiError && (error.status === 404 || error.status === 400)) {

@@ -51,7 +51,21 @@ interface Envelope {
  * comes back 401 we try one refresh and replay the request. Concurrent 401s share a single
  * refresh call, so the refresh token is rotated once, not once per request.
  */
-const NO_REFRESH = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
+/**
+ * Events other parts of the app react to: a successful change (so cached lists refresh) and a
+ * session that can no longer be refreshed (so the app shows the user as logged out).
+ */
+export type ApiEvent = { type: 'changed'; path: string } | { type: 'session-lost' };
+const listeners = new Set<(e: ApiEvent) => void>();
+export function onApiEvent(fn: (e: ApiEvent) => void) {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+const emit = (e: ApiEvent) => listeners.forEach((fn) => fn(e));
+
+const NO_REFRESH = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout', '/auth/forgot-password', '/auth/reset-password'];
 let refreshing: Promise<boolean> | null = null;
 
 export function refreshSession(): Promise<boolean> {
@@ -90,8 +104,10 @@ async function request(path: string, opts: RequestOptions = {}, retried = false)
     throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach Khet Se right now. Check your connection and try again.');
   }
 
-  if (res.status === 401 && !retried && !NO_REFRESH.some((p) => path.startsWith(p)) && (await refreshSession())) {
-    return request(path, opts, true);
+  const refreshable = !NO_REFRESH.some((p) => path.startsWith(p));
+  if (res.status === 401 && !retried && refreshable) {
+    if (await refreshSession()) return request(path, opts, true);
+    if (path !== '/auth/me') emit({ type: 'session-lost' });
   }
 
   if (res.status === 204) return { success: true, data: null };
@@ -101,6 +117,8 @@ async function request(path: string, opts: RequestOptions = {}, retried = false)
     const e = payload?.error;
     throw new ApiError(res.status, e?.code ?? 'UNKNOWN', e?.message ?? `Request failed (${res.status})`, e?.details);
   }
+  const method = opts.method ?? 'GET';
+  if (method !== 'GET' && !path.startsWith('/auth/') && !path.startsWith('/orders/quote')) emit({ type: 'changed', path });
   return payload as Envelope;
 }
 

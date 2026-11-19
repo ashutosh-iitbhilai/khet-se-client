@@ -16,7 +16,10 @@ export function FarmerOrderQueue({
   empty: { icon: LucideIcon; title: string; description: string };
 }) {
   const [page, setPage] = useState(1);
-  const { data, error, loading, reload } = useFetch(() => orderService.farmerQueue(view, page), [view, page]);
+  const { data, error, loading, reload } = useFetch(['orders', 'farmer-queue', view, page], () => orderService.farmerQueue(view, page), {
+    // New orders and partner pickups show up without reloading.
+    refetchInterval: view === 'completed' ? undefined : 30_000,
+  });
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (loading && !data) {

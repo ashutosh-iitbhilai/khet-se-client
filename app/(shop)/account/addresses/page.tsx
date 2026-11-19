@@ -12,7 +12,7 @@ import { addressService } from '@/services/order.service';
 import type { Address } from '@/types';
 
 export default function AddressesPage() {
-  const { data, error, loading, reload, setData } = useFetch(() => addressService.list());
+  const { data, error, loading, reload, setData } = useFetch(['addresses'], () => addressService.list());
   const [editing, setEditing] = useState<Address | 'new' | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);

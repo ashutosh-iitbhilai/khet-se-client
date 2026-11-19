@@ -38,10 +38,7 @@ export function FarmerBrowser({ location }: { location: CustomerLocation }) {
     page: f.page,
     limit: PAGE_SIZE,
   };
-  const { data, error, loading, reload } = useFetch(
-    () => marketplaceService.nearbyFarms(query),
-    [location.lat, location.lng, f.sort, f.radius, f.category, f.maxPrice, f.organic, f.page],
-  );
+  const { data, error, loading, reload } = useFetch(['market', 'farms', query], () => marketplaceService.nearbyFarms(query));
   const filtered = Boolean(f.category || f.radius !== 'auto' || f.maxPrice !== 'any' || f.organic);
 
   return (

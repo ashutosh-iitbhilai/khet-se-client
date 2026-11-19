@@ -16,8 +16,9 @@ export default function ProductDetailPage() {
   const { location, ready } = useCustomerLocation();
 
   const { data, error, loading, reload } = useFetch(
+    ['market', 'listing', id, location?.lat, location?.lng],
     async () => (ready ? marketplaceService.listing(id, location ?? undefined) : null),
-    [id, ready, location?.lat, location?.lng],
+    { enabled: ready },
   );
 
   if (error instanceof ApiError && (error.status === 404 || error.status === 400)) {

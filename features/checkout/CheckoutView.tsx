@@ -55,8 +55,8 @@ function RadioCard({ checked, onSelect, disabled, children }: { checked: boolean
 export function CheckoutView() {
   const router = useRouter();
   const cart = useCart();
-  const addresses = useFetch(() => addressService.list());
-  const methods = useFetch(() => paymentService.methods());
+  const addresses = useFetch(['addresses'], () => addressService.list());
+  const methods = useFetch(['config', 'payment-methods'], () => paymentService.methods());
 
   const [addressId, setAddressId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);

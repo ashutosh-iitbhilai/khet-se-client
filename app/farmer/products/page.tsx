@@ -27,7 +27,7 @@ export default function MyProductsPage() {
 
 function MyProducts() {
   const { status, page, set, flash } = useListingFilters();
-  const { data, error, loading, reload } = useFetch(() => inventoryService.mine({ status, page, limit: 20 }), [status, page]);
+  const { data, error, loading, reload } = useFetch(['inventory', 'mine', { status, page }], () => inventoryService.mine({ status, page, limit: 20 }));
   const [actionError, setActionError] = useState<string | null>(null);
 
   return (

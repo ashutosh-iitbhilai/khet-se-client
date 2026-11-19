@@ -177,14 +177,12 @@ export function ListingDetailView({ item }: { item: ListingDetail }) {
 /** Other farmers near the customer selling the same catalogue product. */
 function AlsoSoldBy({ item }: { item: ListingDetail }) {
   const { location } = useCustomerLocation();
-  const { data } = useFetch(
-    async () =>
-      location
-        ? (await marketplaceService.listings({ lng: location.lng, lat: location.lat, product: item.product.id, limit: 8 })).items.filter(
-            (l) => l.id !== item.id,
-          )
-        : [],
-    [location?.lat, location?.lng, item.id],
+  const { data } = useFetch(['market', 'also-sold-by', item.id, location?.lat, location?.lng], async () =>
+    location
+      ? (await marketplaceService.listings({ lng: location.lng, lat: location.lat, product: item.product.id, limit: 8 })).items.filter(
+          (l) => l.id !== item.id,
+        )
+      : [],
   );
   if (!data?.length) return null;
   return (
@@ -201,13 +199,10 @@ function AlsoSoldBy({ item }: { item: ListingDetail }) {
 
 function MoreFromFarm({ item }: { item: ListingDetail }) {
   const { location } = useCustomerLocation();
-  const { data } = useFetch(
-    async () => {
-      const profile = await marketplaceService.farmerProfile(item.farmer.id, location ?? undefined);
-      return profile.listings.filter((l) => l.farm.id === item.farm.id && l.id !== item.id);
-    },
-    [item.id, location?.lat, location?.lng],
-  );
+  const { data } = useFetch(['market', 'more-from-farm', item.id, location?.lat, location?.lng], async () => {
+    const profile = await marketplaceService.farmerProfile(item.farmer.id, location ?? undefined);
+    return profile.listings.filter((l) => l.farm.id === item.farm.id && l.id !== item.id);
+  });
   if (!data?.length) return null;
   return (
     <section className="mt-16">

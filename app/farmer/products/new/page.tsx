@@ -17,7 +17,7 @@ export default function AddProductPage() {
   const router = useRouter();
   const [picked, setPicked] = useState<Product | null>(null);
 
-  const { data, error, loading, reload } = useFetch(async () => {
+  const { data, error, loading, reload } = useFetch(['inventory', 'new-listing-context'], async () => {
     const [me, listings] = await Promise.all([farmerService.me(), inventoryService.mine({ limit: 50 })]);
     return { farms: me.farms, listings: listings.items };
   });

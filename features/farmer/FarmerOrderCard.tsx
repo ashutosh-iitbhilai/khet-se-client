@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Banknote, Check, CreditCard, MapPin, Navigation, Package, Phone, Truck, X } from 'lucide-react';
+import { Banknote, Bike, Check, CreditCard, Loader2, MapPin, Navigation, Package, Phone, Truck, X } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { SafeImage } from '@/components/ui/safe-image';
 import { applyServerErrors } from '@/features/auth/applyServerErrors';
 import { GROUP_STATUS, formatDateTime } from '@/lib/orderLabels';
+import { VEHICLE_LABEL } from '@/features/delivery/labels';
 import { formatKm, todayInput, unitLabel } from '@/lib/labels';
 import { formatINR } from '@/lib/utils';
 import { orderService } from '@/services/order.service';
@@ -18,7 +19,7 @@ type Group = FarmerOrder['groups'][number];
 
 /** One farm-group of a customer order, with the next action the farmer can take. */
 export function FarmerOrderCard({ order, group, onChanged }: { order: FarmerOrder; group: Group; onChanged: () => void }) {
-  const [busy, setBusy] = useState<GroupStatus | null>(null);
+  const [busy, setBusy] = useState<GroupStatus | 'partner' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'idle' | 'reject' | 'cancel' | 'deliver'>('idle');
   const [note, setNote] = useState('');
@@ -40,6 +41,21 @@ export function FarmerOrderCard({ order, group, onChanged }: { order: FarmerOrde
       setBusy(null);
     }
   };
+
+  const byPartner = group.deliveryMode === 'partner';
+  const partnerAction = async (request: boolean) => {
+    setError(null);
+    setBusy('partner');
+    try {
+      await (request ? orderService.requestPartner(order.id, group.id) : orderService.cancelPartnerRequest(order.id, group.id));
+      onChanged();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const live = ['accepted', 'packed', 'out_for_delivery'].includes(group.status);
 
   return (
     <article className="border border-line bg-white">
@@ -116,6 +132,29 @@ export function FarmerOrderCard({ order, group, onChanged }: { order: FarmerOrde
               <Navigation className="h-4 w-4 text-leaf" aria-hidden /> Directions
             </a>
           </div>
+          {byPartner && live && (
+            <div className="border-l-4 border-leaf bg-sprout px-3 py-2">
+              {group.courier ? (
+                <>
+                  <p className="flex items-center gap-1.5 font-semibold">
+                    <Bike className="h-4 w-4 text-leaf" aria-hidden /> {group.courier.name}
+                  </p>
+                  <p className="text-soil-muted">
+                    {VEHICLE_LABEL[group.courier.vehicle]} · {group.status === 'out_for_delivery' ? 'on the way to the customer' : 'coming to pick up'}
+                  </p>
+                  {group.courier.phone && (
+                    <a href={`tel:+91${group.courier.phone}`} className="mt-1 inline-flex items-center gap-1 font-medium text-leaf hover:underline">
+                      <Phone className="h-3.5 w-3.5" aria-hidden /> Call partner
+                    </a>
+                  )}
+                </>
+              ) : (
+                <p className="flex items-center gap-1.5">
+                  <Loader2 className="h-4 w-4 animate-spin text-leaf" aria-hidden /> Looking for a delivery partner near your farm…
+                </p>
+              )}
+            </div>
+          )}
           {group.status === 'pending' && group.acceptBy && (
             <p className="font-medium text-turmeric">
               Accept or decline by {formatDateTime(group.acceptBy)} — after that it is cancelled automatically.
@@ -147,39 +186,51 @@ export function FarmerOrderCard({ order, group, onChanged }: { order: FarmerOrde
             </div>
           )}
 
-          {group.status === 'accepted' && mode === 'idle' && (
+          {(group.status === 'accepted' || group.status === 'packed') && mode === 'idle' && (
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" loading={busy === 'packed'} onClick={() => move('packed')}>
-                <Package /> Mark packed
-              </Button>
-              <Button size="lg" variant="outline" loading={busy === 'out_for_delivery'} onClick={() => move('out_for_delivery')}>
-                <Truck /> Out for delivery
-              </Button>
+              {group.status === 'accepted' && (
+                <Button size="lg" loading={busy === 'packed'} onClick={() => move('packed')}>
+                  <Package /> Mark packed
+                </Button>
+              )}
+              {!byPartner && (
+                <>
+                  <Button
+                    size="lg"
+                    variant={group.status === 'accepted' ? 'outline' : 'primary'}
+                    loading={busy === 'out_for_delivery'}
+                    onClick={() => move('out_for_delivery')}
+                  >
+                    <Truck /> I’ll deliver it
+                  </Button>
+                  <Button size="lg" variant="outline" loading={busy === 'partner'} onClick={() => partnerAction(true)}>
+                    <Bike /> Get a delivery partner
+                  </Button>
+                </>
+              )}
+              {byPartner && !group.courier && (
+                <Button size="lg" variant="outline" loading={busy === 'partner'} onClick={() => partnerAction(false)}>
+                  Cancel request, I’ll deliver
+                </Button>
+              )}
               <Button size="lg" variant="ghost" onClick={() => setMode('cancel')}>
-                Cancel
+                Cancel order
               </Button>
             </div>
           )}
 
-          {group.status === 'packed' && mode === 'idle' && (
-            <div className="flex flex-wrap gap-3">
-              <Button size="lg" loading={busy === 'out_for_delivery'} onClick={() => move('out_for_delivery')}>
-                <Truck /> Out for delivery
-              </Button>
-              <Button size="lg" variant="ghost" onClick={() => setMode('cancel')}>
-                Cancel
-              </Button>
-            </div>
+          {group.status === 'out_for_delivery' && byPartner && (
+            <p className="text-sm text-soil-muted">The delivery partner will collect the customer’s code when they hand it over.</p>
           )}
 
-          {group.status === 'out_for_delivery' && group.codeLocked && (
+          {group.status === 'out_for_delivery' && !byPartner && group.codeLocked && (
             <Alert>
               Too many wrong codes — this delivery code is locked. Ask the customer to tap “Get a new code” on their order page, then
               enter the new one. Refresh this page after they do.
             </Alert>
           )}
 
-          {group.status === 'out_for_delivery' && !group.codeLocked && (
+          {group.status === 'out_for_delivery' && !byPartner && !group.codeLocked && (
             <form
               className="flex flex-wrap items-end gap-3"
               onSubmit={(e) => {
